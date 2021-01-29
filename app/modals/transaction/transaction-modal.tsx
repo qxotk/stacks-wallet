@@ -178,6 +178,8 @@ export const TransactionModal: FC<TxModalProps> = ({ balance, address }) => {
       nonce: new BN(nonce),
     };
 
+    console.log(txDetails);
+
     const broadcastActions = {
       amount,
       onBroadcastSuccess() {
@@ -207,6 +209,7 @@ export const TransactionModal: FC<TxModalProps> = ({ balance, address }) => {
       if (privateKey) {
         try {
           const transaction = await signSoftwareWalletTx({ ...txDetails, privateKey });
+          console.log(transaction);
           dispatch(broadcastTransaction({ ...broadcastActions, transaction }));
         } catch (e) {
           setPasswordFormError('Network failed requesting fee estimate');
