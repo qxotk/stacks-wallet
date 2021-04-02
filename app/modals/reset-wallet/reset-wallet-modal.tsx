@@ -44,7 +44,12 @@ export const ResetWalletModal: FC<ResetWalletModalProps> = ({ isOpen, onClose })
         <Button mode="tertiary" onClick={closeModal} ref={cancelBtnRef as any}>
           Cancel
         </Button>
-        <Button style={{ background: '#D4001A' }} onClick={resetWallet} isLoading={wipingWallet}>
+        <Button
+          style={{ background: '#D4001A' }}
+          onClick={resetWallet}
+          isLoading={wipingWallet}
+          data-test="btn-reset-wallet"
+        >
           Reset wallet
         </Button>
       </ButtonGroup>

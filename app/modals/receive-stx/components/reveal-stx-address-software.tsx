@@ -54,6 +54,7 @@ export const RevealStxAddressSoftware: FC = () => {
               isDisabled={address !== null}
               {...{ readOnly: address !== null }}
               onChange={form.handleChange}
+              data-test="input-receive-stx-address"
             />
             {form.errors.password && (
               <ErrorLabel>
@@ -66,6 +67,7 @@ export const RevealStxAddressSoftware: FC = () => {
               width="160px"
               isDisabled={form.isSubmitting || address !== null}
               isLoading={form.isSubmitting}
+              data-test="btn-reveal-stx-address"
             >
               Reveal STX address
             </Button>

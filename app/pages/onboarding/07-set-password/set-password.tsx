@@ -100,7 +100,12 @@ export const SetPassword: React.FC = () => {
           Why do I need to set a password?
         </Text>
       </Flex>
-      <Input type="password" mt="base-tight" onChange={handlePasswordInput} />
+      <Input
+        type="password"
+        mt="base-tight"
+        data-test="input-password"
+        onChange={handlePasswordInput}
+      />
       <Text display="block" textStyle="body.small" color="ink.600" mt="base">
         Password strength:
         <Text
@@ -116,7 +121,13 @@ export const SetPassword: React.FC = () => {
           {weakPasswordWarningMessage(strengthResult)}
         </Text>
       )}
-      <OnboardingButton type="submit" mt="loose" isLoading={btnDisabled} isDisabled={btnDisabled}>
+      <OnboardingButton
+        type="submit"
+        mt="loose"
+        data-test="btn-continue-from-password"
+        isLoading={btnDisabled}
+        isDisabled={btnDisabled}
+      >
         Continue
       </OnboardingButton>
     </Onboarding>

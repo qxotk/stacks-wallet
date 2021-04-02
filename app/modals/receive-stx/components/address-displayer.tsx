@@ -32,6 +32,7 @@ export const AddressDisplayer: FC<AddressDisplayerProps> = props => {
         <Text
           color={address ? 'ink' : 'ink.400'}
           fontSize="13px"
+          data-test="text-stx-address"
           {...{ textDecoration: 'italics' }}
         >
           {address ? address : `You'll see your address when you've unlocked your wallet`}

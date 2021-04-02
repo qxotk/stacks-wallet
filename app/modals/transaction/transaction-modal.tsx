@@ -376,7 +376,11 @@ export const TransactionModal: FC<TxModalProps> = ({ address }) => {
           <TxModalButton mode="tertiary" onClick={closeModal}>
             Cancel
           </TxModalButton>
-          <TxModalButton onClick={() => form.submitForm()} isLoading={loading}>
+          <TxModalButton
+            onClick={() => form.submitForm()}
+            isLoading={loading}
+            data-test="btn-send-stx-form-preview"
+          >
             Preview
           </TxModalButton>
         </TxModalFooter>
@@ -403,6 +407,7 @@ export const TransactionModal: FC<TxModalProps> = ({ address }) => {
             isLoading={loading}
             isDisabled={totalIsMoreThanBalance}
             onClick={proceedToSignTransactionStep}
+            data-test="btn-send-stx-form-send"
           >
             Send
           </TxModalButton>
@@ -432,6 +437,7 @@ export const TransactionModal: FC<TxModalProps> = ({ address }) => {
             isLoading={isDecrypting}
             isDisabled={isDecrypting}
             onClick={() => broadcastTx()}
+            data-test="btn-send-stx-form-broadcast-tx"
           >
             Send
           </TxModalButton>

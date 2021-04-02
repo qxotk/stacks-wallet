@@ -71,11 +71,16 @@ export const BalanceCard: FC<BalanceCardProps> = props => {
         </Flex>
       )}
       <Box mt="loose">
-        <Button size="md" onClick={onSelectSend} isDisabled={balance === '0' || balance === null}>
+        <Button
+          size="md"
+          onClick={onSelectSend}
+          isDisabled={balance === '0' || balance === null}
+          data-test="btn-send"
+        >
           <ArrowIcon direction="up" mr="base-tight" />
           Send
         </Button>
-        <Button size="md" ml="tight" onClick={onSelectReceive}>
+        <Button size="md" ml="tight" data-test="btn-receive" onClick={onSelectReceive}>
           <ArrowIcon direction="down" mr="base-tight" />
           Receive
         </Button>

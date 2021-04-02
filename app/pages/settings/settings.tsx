@@ -75,6 +75,7 @@ export const Settings = () => {
         <Button
           mt="loose"
           style={{ background: '#D4001A' }}
+          data-test="btn-open-reset-modal"
           onClick={() => setResetModalOpen(true)}
         >
           Reset wallet

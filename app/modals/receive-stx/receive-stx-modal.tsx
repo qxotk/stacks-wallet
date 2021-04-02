@@ -24,7 +24,12 @@ export const ReceiveStxModal: FC = () => {
       headerComponent={<TxModalHeader onSelectClose={closeModal}>Receive STX</TxModalHeader>}
       footerComponent={
         <TxModalFooter>
-          <Button size="md" mode="tertiary" onClick={closeModal}>
+          <Button
+            size="md"
+            mode="tertiary"
+            data-test="btn-receive-stx-modal-close"
+            onClick={closeModal}
+          >
             Close
           </Button>
         </TxModalFooter>
