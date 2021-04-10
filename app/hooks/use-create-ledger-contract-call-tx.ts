@@ -11,7 +11,7 @@ interface UseCreateLedgerTxArgs {
   txOptions: ContractCallOptions;
 }
 
-export function useCreateLedgerTx() {
+export function useCreateLedgerContractCallTx() {
   const { publicKey, poxInfo, coreNodeInfo } = useSelector((state: RootState) => ({
     publicKey: selectPublicKey(state),
     poxInfo: selectPoxInfo(state),

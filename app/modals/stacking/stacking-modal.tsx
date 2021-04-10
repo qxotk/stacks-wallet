@@ -5,20 +5,17 @@ import { useHistory } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { BigNumber } from 'bignumber.js';
 import BN from 'bn.js';
-import { MempoolTransaction } from '@blockstack/stacks-blockchain-api-types';
 
 import { RootState } from '@store/index';
 import routes from '@constants/routes.json';
-import { selectPublicKey, selectWalletType } from '@store/keys';
 import { activeStackingTx, selectCoreNodeInfo, selectPoxInfo } from '@store/stacking';
 import { StacksTransaction } from '@stacks/transactions';
-import { broadcastTransaction, BroadcastTransactionArgs } from '@store/transaction';
 import { selectAddressBalance } from '@store/address';
 import { useDecryptWallet } from '@hooks/use-decrypt-wallet';
 import { useStackingClient } from '@hooks/use-stacking-client';
 import { useApi } from '@hooks/use-api';
-import { useCreateLedgerTx } from '@hooks/use-create-ledger-tx';
-import { useCreateSoftwareTx } from '@hooks/use-create-software-tx';
+import { useCreateLedgerContractCallTx } from '@hooks/use-create-ledger-contract-call-tx';
+import { useCreateSoftwareContractCallTx } from '@hooks/use-create-software-contract-call-tx';
 import { safeAwait } from '@utils/safe-await';
 
 import {
@@ -29,12 +26,14 @@ import {
 } from '../components/stacking-modal-layout';
 import { DecryptWalletForm } from '../components/decrypt-wallet-form';
 
-import { delay } from '@utils/delay';
 import { StackingFailed } from '@modals/components/stacking-failed';
 import { watchForNewTxToAppear } from '@api/watch-tx-to-appear-in-api';
-import { pendingTransactionSlice } from '@store/pending-transaction';
 import { SignTxWithLedger } from '../components/sign-tx-with-ledger';
 import { LedgerConnectStep, usePrepareLedger } from '@hooks/use-prepare-ledger';
+import { useWalletType } from '@hooks/use-wallet-type';
+import { useBroadcastTx } from '@hooks/use-broadcast-tx';
+import { useMempool } from '@hooks/use-mempool';
+import { isDecryptionError } from '@crypto/key-encryption';
 
 enum StackingModalStep {
   DecryptWalletAndSend,
@@ -60,31 +59,28 @@ export const StackingModal: FC<StackingModalProps> = props => {
 
   const [password, setPassword] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [isSendingTx, setIsSendingTx] = useState(false);
 
   const [decryptionError, setDecryptionError] = useState<string | null>(null);
-  const [isDecrypting, setIsDecrypting] = useState(false);
 
   const { stackingClient } = useStackingClient();
-  const { decryptWallet } = useDecryptWallet();
-  const { createLedgerContractCallTx } = useCreateLedgerTx();
-  const { createSoftwareTx } = useCreateSoftwareTx();
+  const { decryptWallet, isDecrypting } = useDecryptWallet();
+  const { broadcastTx, isBroadcasting } = useBroadcastTx();
+  const { walletType, whenWallet } = useWalletType();
+  const { createLedgerContractCallTx } = useCreateLedgerContractCallTx();
+  const { createSoftwareContractCallTx } = useCreateSoftwareContractCallTx();
+  const { refetch } = useMempool();
   const api = useApi();
 
-  const { walletType, publicKey, poxInfo, coreNodeInfo, balance } = useSelector(
-    (state: RootState) => ({
-      walletType: selectWalletType(state),
-      publicKey: selectPublicKey(state),
-      poxInfo: selectPoxInfo(state),
-      coreNodeInfo: selectCoreNodeInfo(state),
-      balance: selectAddressBalance(state),
-    })
-  );
+  const { poxInfo, coreNodeInfo, balance } = useSelector((state: RootState) => ({
+    poxInfo: selectPoxInfo(state),
+    coreNodeInfo: selectCoreNodeInfo(state),
+    balance: selectAddressBalance(state),
+  }));
 
-  const initialStep =
-    walletType === 'software'
-      ? StackingModalStep.DecryptWalletAndSend
-      : StackingModalStep.SignWithLedgerAndSend;
+  const initialStep = whenWallet({
+    software: StackingModalStep.DecryptWalletAndSend,
+    ledger: StackingModalStep.SignWithLedgerAndSend,
+  });
 
   const [step, setStep] = useState(initialStep);
 
@@ -107,11 +103,11 @@ export const StackingModal: FC<StackingModalProps> = props => {
     if (coreNodeInfo === null) throw new Error('Stacking requires coreNodeInfo');
     const { privateKey } = await decryptWallet(password);
     const txOptions = createStackingTxOptions();
-    return createSoftwareTx({ txOptions, privateKey });
+    return createSoftwareContractCallTx({ txOptions, privateKey });
   }, [
     balance,
     coreNodeInfo,
-    createSoftwareTx,
+    createSoftwareContractCallTx,
     createStackingTxOptions,
     decryptWallet,
     password,
@@ -123,57 +119,42 @@ export const StackingModal: FC<StackingModalProps> = props => {
     return createLedgerContractCallTx({ txOptions: createStackingTxOptions() });
   }, [coreNodeInfo, createLedgerContractCallTx, createStackingTxOptions]);
 
-  const broadcastTx = async () => {
-    if (balance === null) return;
-    setIsSendingTx(true);
+  const createStackingTx = useCallback(async () => {
     setHasSubmitted(true);
-
-    const broadcastActions: Omit<BroadcastTransactionArgs, 'transaction'> = {
-      onBroadcastSuccess: async txId => {
-        dispatch(activeStackingTx({ txId }));
-        const [, tx] = await safeAwait(watchForNewTxToAppear({ txId, nodeUrl: api.baseUrl }));
-        if (tx) {
-          dispatch(pendingTransactionSlice.actions.addPendingTransaction(tx as MempoolTransaction));
+    return whenWallet<() => Promise<StacksTransaction | undefined>>({
+      software: async () => {
+        const [error, transaction] = await safeAwait(createSoftwareWalletTx());
+        if (error) {
+          setDecryptionError(
+            isDecryptionError(error) ? 'Unable to decrypt wallet' : 'Something went wrong'
+          );
+          return;
         }
+        return transaction;
+      },
+      ledger: async () => {
+        const [error, transaction] = await safeAwait(createLedgerWalletTx());
+        if (error) {
+          setHasSubmitted(false);
+          setStep(StackingModalStep.FailedContractCall);
+          return;
+        }
+        return transaction;
+      },
+    })();
+  }, [createLedgerWalletTx, createSoftwareWalletTx, whenWallet]);
+
+  const stackStx = () =>
+    broadcastTx({
+      async onSuccess(txId) {
+        dispatch(activeStackingTx({ txId }));
+        await safeAwait(watchForNewTxToAppear({ txId, nodeUrl: api.baseUrl }));
+        await refetch();
         history.push(routes.HOME);
       },
-      onBroadcastFail: () => setStep(StackingModalStep.FailedContractCall),
-    };
-
-    if (walletType === 'software') {
-      setIsDecrypting(true);
-      await delay(100);
-      const [error, transaction] = await safeAwait(createSoftwareWalletTx());
-      if (error) {
-        setIsSendingTx(false);
-        setIsDecrypting(false);
-        setDecryptionError(
-          String(error) === 'OperationError' ? 'Unable to decrypt wallet' : 'Something went wrong'
-        );
-        return;
-      }
-      if (transaction) {
-        setIsDecrypting(false);
-        dispatch(broadcastTransaction({ ...broadcastActions, transaction }));
-      }
-    }
-
-    if (walletType === 'ledger') {
-      if (publicKey === null) {
-        return;
-      }
-      const [error, transaction] = await safeAwait(createLedgerWalletTx());
-      if (error) {
-        setHasSubmitted(false);
-        setIsSendingTx(false);
-        setStep(StackingModalStep.FailedContractCall);
-        return;
-      }
-      if (transaction) {
-        dispatch(broadcastTransaction({ ...broadcastActions, transaction }));
-      }
-    }
-  };
+      onFail: () => setStep(StackingModalStep.FailedContractCall),
+      txCreator: createStackingTx as any,
+    });
 
   const { step: ledgerConnectStep, isLocked } = usePrepareLedger();
 
@@ -198,9 +179,9 @@ export const StackingModal: FC<StackingModalProps> = props => {
             Close
           </StackingModalButton>
           <StackingModalButton
-            isLoading={isDecrypting || isSendingTx}
-            isDisabled={isDecrypting || isSendingTx}
-            onClick={() => broadcastTx()}
+            isLoading={isDecrypting || isBroadcasting}
+            isDisabled={isDecrypting || isBroadcasting}
+            onClick={() => stackStx()}
           >
             Initiate Stacking
           </StackingModalButton>
@@ -228,7 +209,7 @@ export const StackingModal: FC<StackingModalProps> = props => {
               hasSubmitted || ledgerConnectStep !== LedgerConnectStep.ConnectedAppOpen || isLocked
             }
             isLoading={hasSubmitted}
-            onClick={() => void broadcastTx()}
+            onClick={() => void stackStx()}
           >
             Sign transaction
           </StackingModalButton>
