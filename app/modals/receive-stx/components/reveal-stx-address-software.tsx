@@ -22,6 +22,8 @@ export const RevealStxAddressSoftware: FC = () => {
       try {
         const { address } = await decryptWallet(values.password);
         setAddress(address);
+        form.setValues({ password: '' });
+        form.resetForm();
       } catch (e) {
         form.setErrors({ password: 'Unable to decrypt wallet' });
       }
