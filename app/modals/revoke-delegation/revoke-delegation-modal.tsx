@@ -2,8 +2,8 @@ import React, { FC, useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Modal } from '@blockstack/ui';
 import { ContractCallOptions, StacksTransaction } from '@stacks/transactions';
-import BN from 'bn.js';
 import { useHotkeys } from 'react-hotkeys-hook';
+import BN from 'bn.js';
 
 import { selectPoxInfo } from '@store/stacking';
 
@@ -18,7 +18,7 @@ import { watchForNewTxToAppear } from '@api/watch-tx-to-appear-in-api';
 
 import { useBroadcastTx } from '@hooks/use-broadcast-tx';
 import { useMempool } from '@hooks/use-mempool';
-import { SignTransaction } from '@modals/components/sign-transaction';
+import { SignTransaction } from '@components/tx-signing/sign-transaction';
 import { useLatestNonce } from '@hooks/use-latest-nonce';
 
 import {
@@ -73,7 +73,7 @@ export const RevokeDelegationModal: FC = () => {
     [api.baseUrl, broadcastTx, dispatch, refetchMempool]
   );
 
-  const txFormStepMap: Record<RevokeDelegationModalStep, () => JSX.Element> = {
+  const revokeDelegationStepMap: Record<RevokeDelegationModalStep, () => JSX.Element> = {
     [RevokeDelegationModalStep.SignTransaction]: () => (
       <>
         <Header onSelectClose={closeModal}>Confirm and revoke delegation</Header>
@@ -83,7 +83,7 @@ export const RevokeDelegationModal: FC = () => {
           isBroadcasting={isBroadcasting}
           onTransactionSigned={tx => {
             console.log('transaction signed', tx);
-            void revokeDelegation(tx);
+            revokeDelegation(tx);
           }}
         />
       </>
@@ -104,7 +104,7 @@ export const RevokeDelegationModal: FC = () => {
 
   return (
     <Modal isOpen {...modalStyle}>
-      {txFormStepMap[step]()}
+      {revokeDelegationStepMap[step]()}
     </Modal>
   );
 };

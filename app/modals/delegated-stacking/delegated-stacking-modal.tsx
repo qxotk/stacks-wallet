@@ -29,7 +29,7 @@ import { useBroadcastTx } from '@hooks/use-broadcast-tx';
 import { ContractCallOptions, StacksTransaction } from '@stacks/transactions';
 import { useMempool } from '@hooks/use-mempool';
 
-import { SignTransaction } from '@modals/components/sign-transaction';
+import { SignTransaction } from '@components/tx-signing/sign-transaction';
 import { useLatestNonce } from '@hooks/use-latest-nonce';
 
 enum StackingModalStep {
@@ -80,7 +80,7 @@ export const DelegatedStackingModal: FC<StackingModalProps> = props => {
     };
   }, [poxInfo, stackingClient, amountToStack, delegateeStxAddress, burnHeight, nonce]);
 
-  const delegateStx = async (signedTx: StacksTransaction) =>
+  const delegateStx = (signedTx: StacksTransaction) =>
     broadcastTx({
       onSuccess: async txId => {
         await safeAwait(watchForNewTxToAppear({ txId, nodeUrl: api.baseUrl }));
@@ -101,7 +101,7 @@ export const DelegatedStackingModal: FC<StackingModalProps> = props => {
           isBroadcasting={isBroadcasting}
           onTransactionSigned={tx => {
             console.log('delegation ', tx);
-            void delegateStx(tx);
+            delegateStx(tx);
           }}
         />
       </>

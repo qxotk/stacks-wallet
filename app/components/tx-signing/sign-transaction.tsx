@@ -1,14 +1,14 @@
 import React from 'react';
-import { ContractCallOptions, StacksTransaction } from '@stacks/transactions';
+import { ContractCallOptions, StacksTransaction, TokenTransferOptions } from '@stacks/transactions';
 
 import { useWalletType } from '@hooks/use-wallet-type';
 
 import { SignTransactionSoftware } from './sign-transaction-software';
 import { SignTransactionLedger } from './sign-transaction-ledger';
 
-interface SignTransactionProps {
+export interface SignTransactionProps {
   action: string;
-  txOptions: ContractCallOptions;
+  txOptions: TokenTransferOptions | ContractCallOptions;
   isBroadcasting: boolean;
   onTransactionSigned(tx: StacksTransaction): void;
 }

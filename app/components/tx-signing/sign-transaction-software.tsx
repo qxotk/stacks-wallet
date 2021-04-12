@@ -1,24 +1,21 @@
 import React, { useCallback, useState } from 'react';
 import { useHistory } from 'react-router';
-import { ContractCallOptions, StacksTransaction } from '@stacks/transactions';
 
 import routes from '@constants/routes.json';
 import { useDecryptWallet } from '@hooks/use-decrypt-wallet';
 import { useCreateSoftwareContractCallTx } from '@hooks/use-create-software-contract-call-tx';
-import { DecryptWalletForm } from './decrypt-wallet-form';
 import {
   StackingModalButton as Button,
   StackingModalFooter as Footer,
-} from './stacking-modal-layout';
+} from '../../modals/components/stacking-modal-layout';
 import { safeAwait } from '@utils/safe-await';
 import { isDecryptionError } from '@crypto/key-encryption';
+import { SignTransactionProps } from './sign-transaction';
+import { DecryptWalletForm } from '@modals/components/decrypt-wallet-form';
+import { createSoftwareWalletTokenTransferTx } from '@hooks/use-create-token-transfer-tx';
 
-interface SignTransactionSoftwareProps {
-  action: string;
-  isBroadcasting: boolean;
-  txOptions: ContractCallOptions;
-  onTransactionSigned(tx: StacksTransaction): void;
-}
+type SignTransactionSoftwareProps = SignTransactionProps;
+
 export const SignTransactionSoftware = (props: SignTransactionSoftwareProps) => {
   const { action, txOptions, isBroadcasting, onTransactionSigned } = props;
 
@@ -33,6 +30,9 @@ export const SignTransactionSoftware = (props: SignTransactionSoftwareProps) => 
 
   const createSoftwareWalletTx = useCallback(async () => {
     const { privateKey } = await decryptWallet(password);
+    if ('recipient' in txOptions) {
+      return createSoftwareWalletTokenTransferTx({ privateKey, txOptions });
+    }
     return createSoftwareContractCallTx({ privateKey, txOptions });
   }, [decryptWallet, password, createSoftwareContractCallTx, txOptions]);
 

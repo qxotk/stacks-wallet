@@ -16,7 +16,7 @@ export function useBroadcastTx() {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
 
   const broadcastTx = useCallback(
-    async (args: UseBroadcastTxArgs) => {
+    (args: UseBroadcastTxArgs) => {
       const { onSuccess, onFail, tx } = args;
       const broadcastActions: Omit<BroadcastTransactionArgs, 'transaction'> = {
         onBroadcastSuccess(txid) {
